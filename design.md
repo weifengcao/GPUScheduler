@@ -36,6 +36,40 @@
 
  The system is designed as a classical, horizontally-scalable distributed system.
 
+ ```mermaid
+ graph TD
+     subgraph "User Environment"
+         Client["Client / Agent"]
+     end
+ 
+     subgraph "Cloud Environment (VPC)"
+         APIGateway["API Gateway<br>(Rate Limiting, AuthN)"]
+ 
+         subgraph "Application Tier"
+             APIService["Stateless API<br>(FastAPI App)"]
+             Cache["Distributed Cache<br>(Redis)"]
+         end
+ 
+         subgraph "Asynchronous Processing"
+             Broker["Message Broker<br>(RabbitMQ)"]
+             Workers["Celery Workers<br>(Provisioning, Lease Mgmt)"]
+         end
+ 
+         subgraph "Database Tier"
+             Pooler["Connection Pooler<br>(PgBouncer)"]
+             DB_Primary["DB (Primary)"]
+             DB_Replica["DB (Replica)"]
+         end
+ 
+         CloudAPI["Cloud APIs<br>(e.g., AWS)"]
+ 
+         Client --> APIGateway --> APIService
+         APIService -- "Writes / Tasks" --> Broker --> Workers
+         APIService -- "Reads" --> Pooler --> DB_Replica
+         APIService <--> Cache
+         Workers --> Pooler --> DB_Primary
+         Workers --> CloudAPI
+     end
  ```
  +----------------+   +-----------------+   +----------------+   +--------------------+
  | Client / Agent |-->|   API Gateway   |-->|  Stateless API |-->|  Connection Pooler |-->+-----------+
@@ -228,30 +262,22 @@
  4.  It updates the status of these GPUs to `DEPROVISIONING` in the database to prevent them from being selected again.
 
  ```mermaid
- sequenceDiagram
-     participant Celery Beat
-     participant LeaseCheckWorker
-     participant DB (Primary)
-     participant RabbitMQ
-     participant DeprovisionWorker
-     participant Cloud API
+ graph TD
+     A[Start] --> B{Celery Beat<br>Every 5 mins};
+     B --> C[Run `check_expired_leases` task];
+     C --> D["DB: Find GPUs where<br>lease_expires_at < NOW()"];
+     D --> E{Any expired GPUs?};
+     E -- No --> F[End Cycle];
+     E -- Yes --> G["For each expired GPU"];
+     G --> H["DB: UPDATE status to<br>'DEPROVISIONING'"];
+     H --> I["RabbitMQ: PUBLISH<br>`deprovision_gpu` task"];
  
-     loop Every 5 minutes
-         Celery Beat->>+LeaseCheckWorker: Run `check_expired_leases`
+     subgraph "Async Deprovisioning"
+         J[Deprovision Worker consumes task]
+         J --> K["Cloud API: Terminate Instance"];
+         K --> L["DB: UPDATE status to<br>'DEPROVISIONED'"];
      end
- 
-     LeaseCheckWorker->>+DB (Primary): SELECT id FROM gpus WHERE lease_expires_at < NOW()
-     DB (Primary)-->>-LeaseCheckWorker: Return list of expired_gpu_ids
-     LeaseCheckWorker->>+DB (Primary): UPDATE gpus SET status='DEPROVISIONING' WHERE id IN (...)
-     DB (Primary)-->>-LeaseCheckWorker: OK
-     LeaseCheckWorker->>+RabbitMQ: PUBLISH `deprovision_gpu` task for each ID
-     RabbitMQ-->>-LeaseCheckWorker: (Ack)
- 
-     Note over RabbitMQ, DeprovisionWorker: Worker consumes task asynchronously
-     DeprovisionWorker->>+Cloud API: TerminateInstance(instance_id)
-     Cloud API-->>-DeprovisionWorker: (Instance terminated)
-     DeprovisionWorker->>+DB (Primary): UPDATE gpus SET status='DEPROVISIONED' WHERE id=gpu_id
-     DB (Primary)-->>-DeprovisionWorker: OK
+     I --> J;
  ```
 
  ---
