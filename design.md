@@ -239,25 +239,31 @@
  4.  It updates the status of these GPUs to `DEPROVISIONING` in the database to prevent them from being selected again.
 
  ```mermaid
- graph TD
-     A[Start] --> B{Celery Beat<br>Every 5 mins};
-     B --> C[Run `check_expired_leases` task];
-     C --> D["DB: Find GPUs where<br>lease_expires_at < NOW()"];
-     D --> E{Any expired GPUs?};
-     E -- No --> F[End Cycle];
-     E -- Yes --> G["For each expired GPU"];
-     G --> H["DB: UPDATE status to<br>'DEPROVISIONING'"];
-     H --> I["RabbitMQ: PUBLISH<br>`deprovision_gpu` task"];
+ sequenceDiagram
+     participant Celery Beat
+     participant LeaseCheckWorker
+     participant DB (Primary)
+     participant RabbitMQ
+     participant DeprovisionWorker
+     participant Cloud API
  
-     subgraph "Async Deprovisioning"
-         J[Deprovision Worker consumes task]
-         J --> K["Cloud API: Terminate Instance"];
-         K --> L["DB: UPDATE status to<br>'DEPROVISIONED'"];
+     loop Every 5 minutes
+         Celery Beat->>+LeaseCheckWorker: Run `check_expired_leases`
      end
-     I --> J;
+ 
+     LeaseCheckWorker->>+DB (Primary): SELECT id FROM gpus WHERE lease_expires_at < NOW() AND status != 'DEPROVISIONING'
+     DB (Primary)-->>-LeaseCheckWorker: Return list of expired_gpu_ids
+     LeaseCheckWorker->>+DB (Primary): UPDATE gpus SET status='DEPROVISIONING' WHERE id IN (...)
+     DB (Primary)-->>-LeaseCheckWorker: OK
+     LeaseCheckWorker->>+RabbitMQ: PUBLISH `deprovision_gpu` task for each ID
+     RabbitMQ-->>-LeaseCheckWorker: (Ack)
+ 
+     Note over RabbitMQ, DeprovisionWorker: Worker consumes task asynchronously
+     DeprovisionWorker->>+Cloud API: TerminateInstance(instance_id)
+     Cloud API-->>-DeprovisionWorker: (Instance terminated)
+     DeprovisionWorker->>+DB (Primary): UPDATE gpus SET status='DEPROVISIONED' WHERE id=gpu_id
+     DB (Primary)-->>-DeprovisionWorker: OK
  ```
-
- ---
 
  ## 6. Non-Functional Requirements
 
