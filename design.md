@@ -227,6 +227,33 @@
  3.  For each expired GPU, it submits a `deprovision_gpu` task to RabbitMQ with the `gpu_id`.
  4.  It updates the status of these GPUs to `DEPROVISIONING` in the database to prevent them from being selected again.
 
+ ```mermaid
+ sequenceDiagram
+     participant Celery Beat
+     participant LeaseCheckWorker
+     participant DB (Primary)
+     participant RabbitMQ
+     participant DeprovisionWorker
+     participant Cloud API
+ 
+     loop Every 5 minutes
+         Celery Beat->>+LeaseCheckWorker: Run `check_expired_leases`
+     end
+ 
+     LeaseCheckWorker->>+DB (Primary): SELECT id FROM gpus WHERE lease_expires_at < NOW()
+     DB (Primary)-->>-LeaseCheckWorker: Return list of expired_gpu_ids
+     LeaseCheckWorker->>+DB (Primary): UPDATE gpus SET status='DEPROVISIONING' WHERE id IN (...)
+     DB (Primary)-->>-LeaseCheckWorker: OK
+     LeaseCheckWorker->>+RabbitMQ: PUBLISH `deprovision_gpu` task for each ID
+     RabbitMQ-->>-LeaseCheckWorker: (Ack)
+ 
+     Note over RabbitMQ, DeprovisionWorker: Worker consumes task asynchronously
+     DeprovisionWorker->>+Cloud API: TerminateInstance(instance_id)
+     Cloud API-->>-DeprovisionWorker: (Instance terminated)
+     DeprovisionWorker->>+DB (Primary): UPDATE gpus SET status='DEPROVISIONED' WHERE id=gpu_id
+     DB (Primary)-->>-DeprovisionWorker: OK
+ ```
+
  ---
 
  ## 6. Non-Functional Requirements
@@ -333,5 +360,3 @@ This pipeline is triggered manually by creating a new Git tag (e.g., `v1.1.0`).
     *   Create a draft release on GitHub.
     *   Upload the signed binaries, checksums, and release notes as release artifacts.
     *   Publish the release.
-
-
