@@ -1,2 +1,36 @@
 # GPUScheduler
-An AI agentic workflow to schedule GPU resource dynamically. 
+
+## Project Vision
+
+GPUScheduler is a dynamic, AI-driven platform for GPU resource management. In a crowded market of reactive schedulers, GPUScheduler's unique value lies in its **proactive, predictive allocation model**.
+
+Instead of simply managing a queue of existing requests, our goal is to anticipate the need for GPU resources and have them ready just in time. This is achieved through a dual-mode system:
+
+1.  **A Robust REST API**: A classical, highly-scalable distributed system that serves as the control plane for all resource operations (allocating, monitoring, de-provisioning).
+2.  **An AI-Powered Client Agent**: A lightweight, **open-source**, and **user-owned** agent that runs entirely within the customer's environment. It uses their own LLM API keys to locally monitor workloads and make intelligent, proactive allocation requests to our API. This architecture ensures we never access customer's private data, code, or logs, building a fundamental layer of trust.
+
+This approach shifts the paradigm from resource *management* to resource *anticipation*, aiming to create a seamless, "zero-wait" experience for developers and researchers while optimizing for cost and efficiency.
+
+## Key Differentiators
+
+*   **Proactive Scheduling**: Moves beyond reactive queuing to predict and pre-warm resources.
+*   **Trust-by-Design Agentic Workflow**: Utilizes a user-owned, open-source agent to understand local context without compromising data privacy.
+*   **Simplicity**: Abstracts away the complexity of cloud infrastructure behind a clean API and an intelligent agent.
+
+## Operating Modes
+
+The GPUScheduler can be used in two primary ways:
+
+### 1. Manual Allocation (Reactive)
+Users can integrate directly with the scheduler's REST API. This allows them to programmatically request, list, and terminate GPU resources on-demand as part of their existing scripts or infrastructure-as-code setups.
+
+### 2. Proactive Allocation (AI-Powered Agent)
+For a more advanced, hands-off approach, users can deploy the client-side "smart agent." The user configures this agent to monitor their local systems (e.g., system logs, workload state, job submission history) and provides it with an LLM API key. The agent uses its AI capabilities to understand when a GPU-intensive task is about to begin and proactively calls the GPUScheduler API to have a resource ready just in time.
+
+## System Architecture
+
+The backend is designed as a distributed, cloud-native application intended for high-availability and scalability. Key components include a stateless API service (FastAPI), a PostgreSQL database, a Celery/RabbitMQ task queue, and a Redis cache.
+
+*For a full technical breakdown, please see `docs/DESIGN.md` and `docs/AGENT_DESIGN.md`.*
+
+
