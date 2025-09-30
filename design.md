@@ -71,29 +71,6 @@
          Workers --> CloudAPI
      end
  ```
- +----------------+   +-----------------+   +----------------+   +--------------------+
- | Client / Agent |-->|   API Gateway   |-->|  Stateless API |-->|  Connection Pooler |-->+-----------+
- +----------------+   | (Rate Limiting, |   | (FastAPI App)  |   |    (PgBouncer)     |  |   DB      |
-                      |  AuthN)         |   +-------+--------+   +--------------------+  | (Primary) |
-                      +-----------------+           |                                  +-----------+
-                                                    | (Task)                           |
-                                                    v                                  |
-                                          +------------------+   +-----------------+   |
-                                          |  Message Broker  |-->| Celery Workers  |-->|
-                                          | (e.g., RabbitMQ) |   | (Provisioning,  |   |
-                                          +------------------+   |  Lease Mgmt)    |   |
-                                                                 +-------+---------+   |
-                                                                         |             |
-                                                                         v             |
-                                                                 +-----------------+   |
-                                                                 | Cloud APIs(AWS) |   |
-                                                                 +-----------------+   |
-                                                                                       |
- +--------------------+   +--------------------+   +--------------------+   +----------v-+
- | Distributed Cache  |<->|  Stateless API   |<->|  Connection Pooler |<->|   DB      |
- |   (e.g., Redis)    |   | (FastAPI App)    |   |    (PgBouncer)     |   | (Replica) |
- +--------------------+   +------------------+   +--------------------+   +-----------+
- ```
 
  ### 2.1. Components
 
