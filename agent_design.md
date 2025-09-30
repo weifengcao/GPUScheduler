@@ -27,19 +27,23 @@
 
  The agent is designed as a modular, event-driven application that runs as a continuous background process.
 
- ```
- +----------------------+   (File changes,    +-----------------+   (e.g., "User is   +-----------------+
- |   Monitor Plugins    |--  log lines, etc) ->|    Analyzer     |--  running a PyTorch |  Action Taker   |
- | (File Watcher, Log   |                      | (LLM Interface) |   training job")  ->| (GPUScheduler   |
- |  Tailer, etc.)       |                      +-----------------+                     |   API Client)   |
- +----------------------+                                                            +-------+---------+
-         ^                                                                                    |
-         |                                                                                    | (POST /allocate)
-         | (config.yaml)                                                                      v
- +-------+---------+                                                                +-----------------+
- |   Configuration |                                                                | GPUScheduler    |
- +-----------------+                                                                | Control Plane   |
-                                                                                    +-----------------+
+ ```mermaid
+ graph TD
+     subgraph "User's Local Environment"
+         Config["Configuration<br>(config.yaml)"]
+         Monitors["Monitor Plugins<br>(LogTailer, FileWatcher)"]
+         Analyzer["Analyzer<br>(LLM Interface)"]
+         ActionTaker["Action Taker<br>(API Client)"]
+     end
+ 
+     subgraph "External Services"
+         ControlPlane["GPUScheduler Control Plane"]
+     end
+ 
+     Config --> Monitors
+     Monitors -- "Events (log lines, file changes)" --> Analyzer
+     Analyzer -- "Inferred Intent<br>(e.g., 'start training')" --> ActionTaker
+     ActionTaker -- "POST /allocate" --> ControlPlane
  ```
 
  ### 2.1. Components
