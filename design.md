@@ -118,6 +118,7 @@
  ### 3.1. Key Endpoints
 
  *   `POST /api/gpuscheduler/v1/allocate`: Asynchronously requests a new GPU.
+ *   `POST /api/gpuscheduler/v1/organizations`: Creates a new organization.
  *   `GET /api/gpuscheduler/v1/gpus`: Lists GPUs, with filters for status and health.
  *   `GET /api/gpuscheduler/v1/gpu/{gpu_id}`: Retrieves details for a specific GPU.
  *   `DELETE /api/gpuscheduler/v1/gpu/{gpu_id}`: De-allocates and de-provisions a GPU.

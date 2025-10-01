@@ -1,0 +1,1 @@
+# Core application components like config and DB connection.
