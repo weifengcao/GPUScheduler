@@ -31,6 +31,9 @@ class GPU(Base):
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
+    instance_id = Column(String(255), nullable=True, index=True)
+    instance_public_ip = Column(String(255), nullable=True)
+
     status = Column(Enum(GpuStatus), nullable=False, index=True, default=GpuStatus.PROVISIONING)
     health_state = Column(Enum(GpuHealthState), nullable=False, default=GpuHealthState.UNKNOWN)
     lease_expires_at = Column(DateTime(timezone=True), nullable=False, index=True)

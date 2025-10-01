@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     # Redis URL for Celery broker and caching.
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # AWS Settings
+    AWS_REGION: str = "us-east-1"
+    AWS_AMI_ID: str = "ami-0c55b159cbfafe1f0"  # Example: Amazon Linux 2 AMI
+    AWS_INSTANCE_TYPE: str = "g4dn.xlarge"
+    AWS_SECURITY_GROUP_ID: str
+    AWS_KEY_PAIR_NAME: str
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
