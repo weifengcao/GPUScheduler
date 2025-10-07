@@ -11,6 +11,8 @@ packages = [{include = "backend", from = "src"}, {include = "agent", from = "src
 python = ">=3.10, <3.13"
 bcrypt = "^5.0.0"
 boto3 = "^1.40.42"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-jose = "^3.5.0"
 
 [tool.poetry.group.backend.dependencies]
 # Core service framework
